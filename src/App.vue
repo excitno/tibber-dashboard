@@ -5,9 +5,9 @@
   <div>
     <header>
     </header>
-    <content>
+    <main>
 
-    </content>
+    </main>
   </div>
 </template>
 
