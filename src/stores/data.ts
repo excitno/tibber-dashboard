@@ -1,92 +1,124 @@
 import { defineStore } from 'pinia'
 import Axios from 'axios'
-import { WebSocket } from 'ws'
+import { createClient, type ExecutionResult } from 'graphql-ws';
 
 export interface DataState {
     homeId: string;
-    log: {
-        timestamp: string;
-        power: number;
-    }[];
+    log: LogItem[]
+}
+
+export interface LogItem {
+    timestamp: string;
+    power: number;
 }
 
 export const useDataStore = defineStore('data', {
-    state: () => ({ homeId: "", log: [ { timestamp: "", power: 0 } ]}),
+    state: () => ({ homeId: "", log: [{ timestamp: "", power: 0.00}]}),
     getters: {
-        getHomeId(): string {
-            return this.homeId
-        },
         getApiKey(): string {
-            return import.meta.env.TIBBER_API_KEY;
+            return import.meta.env.VITE_TIBBER_API_KEY || ""
         },
-        getApiUrl(): string {
-            return "api.tibber.com/v1-beta/gql"
-        }
-    },
-    setters: {
-        appendToLog(data: DataState) {
-            this.log.push(data)
+        getQueryApiUrl(): string {
+            return "https://api.tibber.com/v1-beta/gql"
         }
     },
     actions: {
         /**
-         * Populates the home ID by making a GraphQL API request to the Tibber API.
-         * Sets the home ID on the store instance.
+         * Populates the home ID by making a request to the Tibber API.
+         * @returns A Promise that resolves when the home ID has been successfully populated.
          */
-        populateHomeId() {
-            const apiUrl = this.getApiUrl
-            const homeIdQuery = `{
-                viewer {
-                  homes {
-                      id
-                  }
-                }
-              }`
+        async getHomeId(): Promise<string> {
+            const apiUrl = this.getQueryApiUrl
+            const homeIdQuery = `{viewer {homes {id}}}`
             const apiKey = this.getApiKey
             
-            Axios.post(`https://${apiUrl}`, { query: homeIdQuery }, { headers: { Authorization: `Bearer ${apiKey}` } })
+            const request = await Axios.post(apiUrl, { query: homeIdQuery }, { headers: { Authorization: `Bearer ${apiKey}` } })
                 .then(response => {
                     const homeId = response.data.data.viewer.homes[0].id
                     this.homeId = homeId
+                    return homeId
                 })
                 .catch(error => console.log(error))
+            return request
+        },
+        /**
+         * Retrieves the websocket subscription URL for the current user from the Tibber API.
+         * @returns A Promise that resolves to a string representing the websocket subscription URL.
+         */
+        async getWebsocketSubscriptionUrl(): Promise<string> {
+            const apiUrl = this.getQueryApiUrl
+            const wsSubUrlQuery =`{viewer { websocketSubscriptionUrl}}`
+            const apiKey = this.getApiKey
+            
+            const request = await Axios.post(apiUrl, { query: wsSubUrlQuery }, { headers: { Authorization: `Bearer ${apiKey}` } })
+                .then(response => {
+                    return response.data.data.viewer.websocketSubscriptionUrl
+                })
+                .catch(error => console.log(error))
+            return request
         },
         /**
          * Subscribes to live measurement data for a specific home using GraphQL websocket subscription.
          * @param homeId The home ID to subscribe to.
          * @returns void
          */
-        subscribeToLiveMeasurement(homeId: string) {
-            const apiUrl = this.getApiUrl
+        async subscribeToLiveMeasurement(homeId: string, apiUrl: string) {
             const apiKey = this.getApiKey
-            const liveSubscriptionQuery = `subscription{ liveMeasurement(homeId:'${homeId}'){ timestamp power } }}`
-            // graph QL websocket subscription
-            const ws = new WebSocket(`wss://${apiUrl}`, `graphql-ws`)
-            ws.onopen = () => {
-                ws.send(JSON.stringify({ type: `connection_init`, payload: { Authorization: `Bearer ${apiKey}` } }))
-                ws.send(JSON.stringify({ type: `start`, payload: { query: liveSubscriptionQuery } }))
-            }
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data)
-                if (data.type === `data`) {
-                    const measurement = data.payload.data.liveMeasurement
-                    this.appendToLog(measurement)
+
+            const client = createClient({
+                url: apiUrl,
+                lazy: false,
+                connectionParams: () => ({
+                    headers: {
+                        Authorization: `Bearer ${apiKey}`,
+                    },
+                }),
+            })
+
+            const subscription = `subscription {
+                liveMeasurement(homeId: "${homeId}") {
+                    timestamp
+                    power
                 }
-            }
-        }
-    },
-    methods: {
-        getLog(): DataState[] {
+            }`
+
+            client.subscribe({ query: subscription }, {
+                next: (data: ExecutionResult<{ liveMeasurement: { timestamp: string, power: number } }, Record<string, unknown>>) => {
+                    const measurement = data?.data?.liveMeasurement;
+                    if (measurement) {
+                        this.log.push(measurement);
+                    }
+                },
+                error: (error: unknown) => {
+                    console.log(error);
+                    client.dispose();
+                },
+                complete: () => {
+                    console.log('Subscription completed');
+                    client.dispose();
+                }
+            })
+        },
+        /**
+         * Returns an array of LogItem objects representing the log.
+         * @returns {LogItem[]} An array of LogItem objects representing the log.
+         */
+        getLog(): LogItem[] {
             return this.log
         },
-        getLatestMeasurement(): DataState {
+        /**
+         * Returns the latest measurement from the log.
+         * @returns {LogItem} The latest measurement as a LogItem object.
+         */
+        getLatestMeasurement(): LogItem {
             return this.log[this.log.length - 1]
         },
+        /**
+         * Returns the latest power measurement.
+         * @returns The latest power measurement.
+         */
         getLatestPower(): number {
             return this.getLatestMeasurement().power
-        },
-        getLatestAccumulatedConsumption(): number {
-            return this.getLatestMeasurement().accumulatedConsumption
         }
     }
 })

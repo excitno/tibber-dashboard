@@ -10,5 +10,9 @@
   ],
   "typeAcquisition": {
     "enable": true
+  },
+  "compilerOptions": {
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true,
   }
 }
