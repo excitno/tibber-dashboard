@@ -91,11 +91,9 @@ export const useDataStore = defineStore('data', {
                 },
                 error: (error: unknown) => {
                     console.log(error);
-                    client.dispose();
                 },
                 complete: () => {
                     console.log('Subscription completed');
-                    client.dispose();
                 }
             })
         },
