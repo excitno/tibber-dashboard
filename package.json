@@ -17,6 +17,7 @@
     "graphql": "^16.8.1",
     "graphql-ws": "^5.14.2",
     "pinia": "^2.1.7",
+    "rss-parser": "^3.13.0",
     "tibber-api": "^5.1.9",
     "uuid": "^9.0.1",
     "vue": "^3.3.4",
