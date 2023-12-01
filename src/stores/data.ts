@@ -42,7 +42,7 @@ export const useDataStore = defineStore('data', {
         log: [
             {
                 timestamp: new Date().toISOString(),
-                power: 4001
+                power: 5001
             }
         ]
     }),

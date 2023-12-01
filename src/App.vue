@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useDataStore } from '@/stores/data';
 
+const threshold: number = 5000;
+
 const store = useDataStore();
 store.getWebsocketSubscriptionUrl().then((FeedApiUrl: string) => {
   store.getHome().then(() => {
@@ -9,7 +11,7 @@ store.getWebsocketSubscriptionUrl().then((FeedApiUrl: string) => {
 });
 
 const getTimeLastAboveThreshold = function(): string {
-  const lastAboveThreshold: Date | null = store.getLastTimestampAboveThreshold(4000);
+  const lastAboveThreshold: Date | null = store.getLastTimestampAboveThreshold(threshold);
   if (lastAboveThreshold == null) {
     return 'Ukjent';
   }
@@ -48,9 +50,9 @@ const getTextualSince = function(timestamp: number): string {
 }
 
 const getClassForTime = function(): string {
-  const timestamp = store.getLastTimestampAboveThreshold(4000)?.getTime();
+  const timestamp = store.getLastTimestampAboveThreshold(threshold)?.getTime();
   if (timestamp == undefined) {
-    return 'card col-xs-12 col-4 card text-bg-info';
+    return 'danger';
   }
   const now = new Date().getTime();
   const diff = now - timestamp;
@@ -58,44 +60,22 @@ const getClassForTime = function(): string {
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
 
-  if (hours < 1) {
-    return 'card col-xs-12 col-4 card text-bg-success';
-  } else if (hours < 6) {
-    return 'card col-xs-12 col-4 card text-bg-warning';
+  if (hours < 2) {
+    return 'status-good';
   } else {
-    return 'card col-xs-12 col-4 card text-bg-danger';
+    return 'status-danger';
   }
 }
-const today = new Date();
-
 </script>
 
 <template>
-  <div>
-    <header>
-      <nav class="navbar navbar-expand-lg bg-body-tertiary">
-        <div class="container-fluid">
-          <span class="navbar-brand mb-0 h1">{{ store.home.address.address1 }}, {{ store.home.address.city }}</span>
-        </div>
-      </nav>
-    </header>
+  <div :class="getClassForTime()">
     <main>
       <div class="card-group">
-        <div class="card col-xs-12 col-4 card text-bg-info">
-          <div class="card-body">
-            <h5 class="card-title">Siste avlesning</h5>
-            <p class="lead card-text">{{ store.getLatestPower() }}</p>
-          </div>
-        </div>
-        <div :class="getClassForTime()">
+        <div class="card col-xs-12 col-4" style="border-radius: 0;">
           <div class="card-body">
             <h5 class="card-title">Varmepumpa startet sist</h5>
             <p class="lead card-text">{{ getTimeLastAboveThreshold() }}</p>
-          </div>
-        </div>
-        <div class="card col-xs-12 col-4 card text-bg-info">
-          <div class="card-body">
-            <h5 class="display-1 card-title">{{ today.getHours() }}:{{ today.getMinutes() }}</h5>
           </div>
         </div>
       </div>
@@ -104,5 +84,8 @@ const today = new Date();
 </template>
 
 <style scoped>
-
+.card {
+  background-color: transparent;
+  border: none;
+}
 </style>

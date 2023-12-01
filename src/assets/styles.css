@@ -1,0 +1,44 @@
+#app {
+    font-family: 'Avenir', Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: url(/green.jpg) no-repeat center center fixed;
+    min-height: 100vh;
+    max-height: 100vh;
+}
+
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: right;
+    justify-content: right;
+}
+
+.status-good {
+    background: url(/green.jpg) no-repeat center center fixed;
+}
+
+.status-danger {
+    background: url(/red.jpg) no-repeat center center fixed;
+}
+
+.card {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+
+    > * {
+        color: #f9f9f9 !important;
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+}
